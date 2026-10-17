@@ -78,7 +78,12 @@ jobs:
               await github.rest.issues.update({ ...context.repo, issue_number: context.issue.number, state: 'closed', state_reason: 'not_planned' });
               return;
             }
-            await admin.rest.repos.addCollaborator({ ...target, username: author, permission: choice });
+            try {
+              await admin.rest.repos.addCollaborator({ ...target, username: author, permission: choice });
+            } catch (e) {
+              await reply(`⚠️ Davet gönderilemedi (${e.status ?? ''} ${e.message}). Kutunun işaretini kaldırıp tekrar dene ya da elle davet et.`);
+              throw e;
+            }
             await github.rest.issues.addLabels({ ...context.repo, issue_number: context.issue.number, labels: [choice === 'admin' ? 'onay: admin' : 'onay: write'] });
             await reply(`Davet gönderildi: @${author}, rol **${choice === 'admin' ? 'Admin' : 'Write'}**, onaylayan @${approver}. GitHub'dan gelen e-postadaki ya da https://github.com/codeviants-lab/chess/invitations sayfasındaki daveti kabul et. Hoş geldin!`);
             await github.rest.issues.update({ ...context.repo, issue_number: context.issue.number, state: 'closed', state_reason: 'completed' });
