@@ -1,0 +1,84 @@
+name: Katılım istekleri
+
+# A join request (issue from the "Katılmak istiyorum" form) gets a comment with three checkboxes. When someone
+# with admin rights on codeviants-lab/chess ticks one, the author is invited with that role (or the request is
+# declined) and the issue is closed. Inviting needs the secret INVITE_TOKEN: a fine-grained token with
+# "Administration: read and write" on codeviants-lab/chess.
+
+on:
+  issues:
+    types: [opened]
+  issue_comment:
+    types: [edited]
+
+permissions:
+  issues: write
+
+jobs:
+  ask:
+    if: github.event_name == 'issues' && contains(github.event.issue.labels.*.name, 'katılım-isteği')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const login = context.payload.issue.user.login;
+            await github.rest.issues.createComment({
+              ...context.repo,
+              issue_number: context.issue.number,
+              body: [
+                `@writerforight — **@${login}** katılmak istiyor. Birine dokun:`,
+                '',
+                '- [ ] Admin olarak kabul et (kod yazar, başkalarını da davet edebilir)',
+                '- [ ] Write olarak kabul et (kod yazar, davet edemez)',
+                '- [ ] Reddet',
+                '',
+                '<!-- katilim-karar -->',
+              ].join('\n'),
+            });
+
+  decide:
+    if: >-
+      github.event_name == 'issue_comment' &&
+      github.event.comment.user.login == 'github-actions[bot]' &&
+      contains(github.event.comment.body, '<!-- katilim-karar -->') &&
+      github.event.issue.state == 'open'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          INVITE_TOKEN: ${{ secrets.INVITE_TOKEN }}
+        with:
+          script: |
+            const body = context.payload.comment.body;
+            const checked = (text) => body.includes(`- [x] ${text}`);
+            const choice = checked('Admin olarak kabul et') ? 'admin' : checked('Write olarak kabul et') ? 'push' : checked('Reddet') ? 'reject' : null;
+            if (!choice) return;
+
+            const approver = context.payload.sender.login;
+            const author = context.payload.issue.user.login;
+            const reply = (text) => github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body: text });
+
+            if (!process.env.INVITE_TOKEN) {
+              await reply('⚠️ Davet gönderilemedi: `INVITE_TOKEN` secret tanımlı değil.');
+              return;
+            }
+            const admin = new github.constructor({ auth: process.env.INVITE_TOKEN });
+            const target = { owner: 'codeviants-lab', repo: 'chess' };
+
+            // Only people who are admins of the chess repo may decide.
+            const { data: perm } = await admin.rest.repos.getCollaboratorPermissionLevel({ ...target, username: approver });
+            if (perm.permission !== 'admin') {
+              await reply(`@${approver} bu isteği onaylayamaz: yalnızca chess reposunun Admin'leri karar verebilir.`);
+              return;
+            }
+
+            if (choice === 'reject') {
+              await reply(`İstek @${approver} tarafından reddedildi.`);
+              await github.rest.issues.update({ ...context.repo, issue_number: context.issue.number, state: 'closed', state_reason: 'not_planned' });
+              return;
+            }
+            await admin.rest.repos.addCollaborator({ ...target, username: author, permission: choice });
+            await github.rest.issues.addLabels({ ...context.repo, issue_number: context.issue.number, labels: [choice === 'admin' ? 'onay: admin' : 'onay: write'] });
+            await reply(`Davet gönderildi: @${author}, rol **${choice === 'admin' ? 'Admin' : 'Write'}**, onaylayan @${approver}. GitHub'dan gelen e-postadaki ya da https://github.com/codeviants-lab/chess/invitations sayfasındaki daveti kabul et. Hoş geldin!`);
+            await github.rest.issues.update({ ...context.repo, issue_number: context.issue.number, state: 'closed', state_reason: 'completed' });
