@@ -1,0 +1,25 @@
+name: Katılmak istiyorum
+description: codeviants projelerinde birlikte geliştirmek için katılma isteği
+title: "Katılım isteği"
+labels: [katılım-isteği]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bu formu gönderince isteğin onaya düşer; onaylanınca GitHub'dan **davet e-postası** gelir.
+        Daveti kabul ettiğinde projeye erişimin açılır.
+
+        ⚠️ Bu sayfa herkese açık: buraya telefon numarası ya da e-posta yazma.
+  - type: input
+    id: ad
+    attributes:
+      label: Gruptaki adın
+      description: Seni tanıyabilmemiz için WhatsApp grubundaki adın ya da takma adın.
+      placeholder: ör. Ali K.
+    validations:
+      required: true
+  - type: textarea
+    id: ilgi
+    attributes:
+      label: Neyle ilgilenirsin? (isteğe bağlı)
+      description: Kod, tasarım, test, fikir… ne olursa.
