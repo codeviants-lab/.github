@@ -17,4 +17,4 @@ yapmamanın "normal"i karşısında sapkın kalmak iyidir.
 Bir WhatsApp grubunun satranç uygulaması: bota karşı, arkadaşına link atarak ya da rastgele rakiple oyna.
 Telefonda ve bilgisayarda çalışır, kayıt gerekmez.
 
-**▶ [Tıkla ve oyna: codeviants-lab.github.io](https://codeviants-lab.github.io)**
+**▶ [Tıkla ve oyna: codeviants-lab.github.io/chess](https://codeviants-lab.github.io/chess/)**
